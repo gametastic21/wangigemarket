@@ -1,0 +1,822 @@
+<!-- Chosen Palette: Warm Terracotta & Market Emerald (Slate-900 background accents, Terracotta brand primary, Emerald discount & checkout action highlights) -->
+<!-- Application Structure Plan: Interactive single-page store application for Wangige Market Clothing. Enhanced with dynamic variant image switching, dedicated Home/Away kit selections for Football Jerseys, live catalog search, sliding cart drawer, and automated WhatsApp order generator with physical shop discount calculations. -->
+<!-- Visualization & Content Choices: Semantic HTML5, Tailwind CSS framework, FontAwesome icons, and Vanilla JS state management. Real-time preview updates manipulate card DOM element image sources seamlessly when users toggle Kit types (Home/Away) or team colors. NO SVG graphics used. NO Mermaid JS used. -->
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wangige Market Clothing | Wholesale & Retail Fashion</title>
+    <!-- Wangige Market live database connection -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            },
+            colors: {
+              brand: {
+                50: '#fdf8f6',
+                100: '#fbeee9',
+                500: '#e05a33',
+                600: '#c74520',
+                700: '#9e3518',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+      .img-fade-in {
+        animation: fadeIn 0.35s ease-in-out;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0.4; transform: scale(0.98); }
+        to { opacity: 1; transform: scale(1); }
+      }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col justify-between">
+
+    <!-- Top Announcement Banner -->
+    <div class="bg-emerald-700 text-white text-xs sm:text-sm py-2 px-4 text-center font-bold tracking-wide flex items-center justify-center gap-2 shadow-inner">
+        <i class="fa-solid fa-shop"></i>
+        <span>Physical Shop Special: Get <strong class="underline decoration-amber-300 underline-offset-2">KES 500 OFF</strong> when you collect your order in person at Wangige Market!</span>
+    </div>
+
+    <!-- Navigation Header -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 bg-brand-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+                        <i class="fa-solid fa-shirt text-xl"></i>
+                    </div>
+                    <div>
+                        <span class="text-xl font-extrabold tracking-tight text-slate-900 block leading-none">Wangige Market</span>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-brand-600 mt-1 block">Clothing & Fashion</span>
+                    </div>
+                </div>
+
+                <nav class="hidden md:flex items-center gap-8 font-medium text-sm">
+                    <a href="#shop" class="text-slate-600 hover:text-brand-600 transition">Shop Catalog</a>
+                    <a href="#physical-promo" class="text-emerald-700 font-bold hover:text-emerald-800 transition flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+                        <i class="fa-solid fa-shop"></i> Physical Shop Discount
+                    </a>
+                    <a href="#about" class="text-slate-600 hover:text-brand-600 transition">About Stall</a>
+                </nav>
+
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSearchModal()" class="p-2.5 text-slate-600 hover:bg-slate-100 rounded-xl transition relative" title="Search catalog">
+                        <i class="fa-solid fa-magnifying-glass text-lg"></i>
+                    </button>
+                    <button onclick="toggleCartDrawer()" class="flex items-center gap-2 bg-brand-50 hover:bg-brand-100 text-brand-700 px-4 py-2.5 rounded-xl font-semibold transition border border-brand-100 relative">
+                        <i class="fa-solid fa-bag-shopping"></i>
+                        <span class="hidden sm:inline">Cart</span>
+                        <span id="cart-badge" class="absolute -top-1.5 -right-1.5 bg-brand-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold shadow-sm">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow">
+        <!-- Hero Section -->
+        <section class="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden py-16 lg:py-24">
+            <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#e05a33_1px,transparent_1px)] [background-size:16px_16px]"></div>
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                    <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
+                        <div class="inline-flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/35 text-emerald-400 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider">
+                            <i class="fa-solid fa-tag"></i> Physical Store Promo: Save KES 500 on Pickup
+                        </div>
+                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight">
+                            Wangige Market <span class="text-brand-500">Clothing & Fashion</span>
+                        </h1>
+                        <p class="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto lg:mx-0">
+                            Explore dynamic <strong class="text-white">Home & Away Football Jerseys</strong>, Jeans, T-Shirts, Sweaters, Jackets, Official Wear, and Undergarments. Real-time preview updates as you choose colors and kits!
+                        </p>
+                        <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
+                            <a href="#shop" class="w-full sm:w-auto bg-brand-500 hover:bg-brand-600 text-white px-8 py-4 rounded-xl font-bold transition shadow-lg shadow-brand-500/30 text-center">
+                                Browse Catalog & Jerseys <i class="fa-solid fa-arrow-right ml-2"></i>
+                            </a>
+                            <a href="#physical-promo" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-xl font-bold transition text-center shadow-lg shadow-emerald-600/20">
+                                Claim KES 500 Discount
+                            </a>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-5 flex justify-center">
+                        <div id="physical-promo" class="w-full max-w-md bg-gradient-to-tr from-emerald-600 to-teal-600 rounded-3xl p-1.5 shadow-2xl">
+                            <div class="bg-slate-900 rounded-[22px] p-6 text-center space-y-4">
+                                <div class="inline-block p-4 bg-emerald-500/15 rounded-2xl text-emerald-400">
+                                    <i class="fa-solid fa-store text-4xl"></i>
+                                </div>
+                                <h3 class="text-xl font-bold text-white">Visit Our Physical Stall</h3>
+                                <p class="text-sm text-slate-300">Come pick your clothes in person at <strong class="text-white">Wangige Market</strong> and enjoy an instant <span class="text-emerald-400 font-bold">KES 500 discount</span> on your total order!</p>
+                                <div class="bg-slate-800/90 rounded-xl p-3 text-xs text-slate-300 font-semibold border border-slate-700">
+                                    <i class="fa-solid fa-location-dot text-emerald-400 mr-1"></i> Wangige Market, Kiambu County
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Product Catalog Section -->
+        <section id="shop" class="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+                <div>
+                    <span class="text-brand-600 font-bold text-sm tracking-wider uppercase">Catalog Categories</span>
+                    <h2 class="text-3xl font-extrabold text-slate-900 mt-1">Interactive Collection</h2>
+                </div>
+                <div id="category-filters" class="flex flex-wrap gap-2">
+                    <button onclick="filterCategory('all')" class="category-btn active px-4 py-2 rounded-xl text-sm font-semibold transition bg-brand-500 text-white shadow-sm">All Items</button>
+                    <button onclick="filterCategory('jerseys')" class="category-btn px-4 py-2 rounded-xl text-sm font-semibold transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"><i class="fa-solid fa-shirt mr-1"></i> Jerseys (Home & Away)</button>
+                    <button onclick="filterCategory('jeans')" class="category-btn px-4 py-2 rounded-xl text-sm font-semibold transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">Jeans</button>
+                    <button onclick="filterCategory('tshirts')" class="category-btn px-4 py-2 rounded-xl text-sm font-semibold transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">T-Shirts</button>
+                    <button onclick="filterCategory('sweaters')" class="category-btn px-4 py-2 rounded-xl text-sm font-semibold transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">Sweaters</button>
+                    <button onclick="filterCategory('jackets')" class="category-btn px-4 py-2 rounded-xl text-sm font-semibold transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">Jackets</button>
+                    <button onclick="filterCategory('official')" class="category-btn px-4 py-2 rounded-xl text-sm font-semibold transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">Official Wear</button>
+                    <button onclick="filterCategory('undergarments')" class="category-btn px-4 py-2 rounded-xl text-sm font-semibold transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">Undergarments</button>
+                </div>
+            </div>
+
+            <!-- Dynamic Product Grid -->
+            <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Dynamically populated via JS -->
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="bg-white py-16 border-y border-slate-100">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                    <div class="space-y-6">
+                        <span class="text-brand-600 font-bold text-sm tracking-wider uppercase">Family Owned Shop</span>
+                        <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight">Direct from Wangige Market to You</h2>
+                        <p class="text-slate-600 leading-relaxed">
+                            Our parents have spent years building a trusted clothing stall at Wangige Market. We specialize in top-quality jeans, t-shirts, jerseys (Fan & Player edition, Home & Away), official office attire, sweaters, and daily wear for all ages.
+                        </p>
+                        <p class="text-slate-600 leading-relaxed">
+                            Order online with instant WhatsApp checkout or visit our physical market stall to claim your <strong class="text-emerald-700">KES 500 physical shop discount</strong>!
+                        </p>
+                    </div>
+                    <div class="bg-gradient-to-br from-brand-100 to-amber-100 p-8 rounded-3xl relative">
+                        <div class="space-y-4">
+                            <div class="flex items-start gap-4 bg-white p-5 rounded-2xl shadow-sm">
+                                <div class="bg-emerald-600 text-white p-3 rounded-xl">
+                                    <i class="fa-solid fa-shop text-xl"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-900">Physical Store Discount</h4>
+                                    <p class="text-xs text-slate-600 mt-1">Get KES 500 off your order when you visit us in person at Wangige Market.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-4 bg-white p-5 rounded-2xl shadow-sm">
+                                <div class="bg-brand-500 text-white p-3 rounded-xl">
+                                    <i class="fa-brands fa-whatsapp text-xl"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-900">Easy WhatsApp Ordering</h4>
+                                    <p class="text-xs text-slate-600 mt-1">Chat directly with us to confirm sizes, colors, home/away kits, and delivery details instantly.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-white pt-16 pb-12 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-10 pb-12 border-b border-slate-800">
+                <div class="space-y-4 md:col-span-2">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center text-white font-bold">
+                            <i class="fa-solid fa-shirt"></i>
+                        </div>
+                        <span class="text-xl font-extrabold tracking-tight">Wangige Market Clothing</span>
+                    </div>
+                    <p class="text-slate-400 text-sm max-w-sm">
+                        Your trusted family clothing vendor at Wangige Market, Kiambu. Wholesale and retail fashion for men, women, and kids.
+                    </p>
+                    <div class="flex items-center gap-3 text-slate-400 text-sm">
+                        <i class="fa-solid fa-location-dot text-brand-500"></i> Wangige Market, Kiambu County, Kenya
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white mb-4">Quick Links</h4>
+                    <ul class="space-y-2.5 text-sm text-slate-400">
+                        <li><a href="#shop" class="hover:text-brand-400 transition">Shop Catalog</a></li>
+                        <li><a href="admin.html" class="hover:text-brand-400 transition">Admin</a></li>
+                        <li><a href="#physical-promo" class="hover:text-brand-400 transition">Physical Shop Discount</a></li>
+                        <li><a href="#" onclick="toggleCartDrawer(); return false;" class="hover:text-brand-400 transition">View Shopping Cart</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white mb-4">WhatsApp Customer Care</h4>
+                    <p class="text-xs text-slate-400 mb-2">Have questions or need bulk assistance? Chat with us:</p>
+                    <a href="https://wa.me/254712345678" target="_blank" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition shadow-md">
+                        <i class="fa-brands fa-whatsapp text-lg"></i> +254 712 345 678
+                    </a>
+                </div>
+            </div>
+            <div class="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
+                <p>&copy; 2026 Wangige Market Clothing. All rights reserved.</p>
+                <div class="flex items-center gap-6">
+                    <span class="hover:text-slate-400 transition cursor-pointer">Privacy Policy</span>
+                    <span class="hover:text-slate-400 transition cursor-pointer">Terms of Service</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Slide-over Cart Drawer -->
+    <div id="cart-drawer" class="fixed inset-0 z-50 overflow-hidden hidden">
+        <div onclick="toggleCartDrawer()" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"></div>
+        <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
+            <div class="w-screen max-w-md bg-white shadow-2xl flex flex-col">
+                <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 bg-brand-500/10 text-brand-600 rounded-xl flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-bag-shopping"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900">Your Shopping Cart</h3>
+                    </div>
+                    <button onclick="toggleCartDrawer()" class="p-2 text-slate-400 hover:text-slate-600 rounded-lg transition">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                <div id="cart-items-container" class="flex-1 overflow-y-auto p-6 space-y-4">
+                    <!-- Dynamically populated -->
+                </div>
+                <div class="p-6 border-t border-slate-100 bg-slate-50 space-y-4">
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-sm text-slate-600">
+                            <span>Subtotal</span>
+                            <span id="cart-subtotal" class="font-semibold text-slate-900">Ksh 0</span>
+                        </div>
+                        <div class="flex justify-between text-sm text-slate-600">
+                            <span>Delivery Fee (Optional)</span>
+                            <span class="font-semibold text-slate-900">Ksh 300</span>
+                        </div>
+                        <div class="flex justify-between text-base font-extrabold text-slate-900 pt-2 border-t border-slate-200">
+                            <span>Total Amount</span>
+                            <span id="cart-total" class="text-brand-600">Ksh 300</span>
+                        </div>
+                    </div>
+                    <button onclick="openCheckoutModal()" id="checkout-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-xl font-bold transition shadow-lg shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        <i class="fa-brands fa-whatsapp text-xl"></i> Order via WhatsApp
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WhatsApp Checkout Form Modal -->
+    <div id="checkout-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto hidden">
+        <div onclick="closeCheckoutModal()" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+        <div class="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 overflow-hidden z-10 my-8">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
+                <div>
+                    <h3 class="text-xl font-extrabold text-slate-900">Finalize WhatsApp Order</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Review details & send your order directly to our WhatsApp</p>
+                </div>
+                <button onclick="closeCheckoutModal()" class="p-2 text-slate-400 hover:text-slate-600 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="checkout-form" onsubmit="handleWhatsAppCheckout(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Your Full Name</label>
+                        <input type="text" id="cust-name" required placeholder="e.g. John Kamau" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Phone Number</label>
+                        <input type="tel" id="cust-phone" required placeholder="0712345678" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Fulfillment Option</label>
+                    <select id="cust-fulfillment" onchange="toggleFulfillmentFields()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 transition font-semibold">
+                        <option value="delivery">Courier Delivery (Nairobi, Kiambu & Upcountry)</option>
+                        <option value="physical">Pickup at Physical Shop (Claim KES 500 OFF)</option>
+                    </select>
+                </div>
+
+                <div id="delivery-address-group">
+                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Delivery Location / Estate</label>
+                    <input type="text" id="cust-address" placeholder="e.g. Ruaka, Westlands, or Thika Road" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 transition">
+                </div>
+
+                <div id="physical-notice" class="hidden bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-xs text-emerald-800 space-y-1">
+                    <p class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-shop"></i> Physical Shop Discount Activated!</p>
+                    <p>You selected to visit our Wangige Market stall in person. An instant <strong>KES 500 discount</strong> will be applied to your final bill!</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Additional Notes (Optional)</label>
+                    <input type="text" id="cust-notes" placeholder="e.g. Will arrive by 3 PM" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 transition">
+                </div>
+
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-xl font-bold transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
+                    <i class="fa-brands fa-whatsapp text-xl"></i> Send Order to WhatsApp Now
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Live Search Modal -->
+    <div id="search-modal" class="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 hidden">
+        <div onclick="toggleSearchModal()" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+        <div class="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 z-10 space-y-4">
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i>
+                <input type="text" id="search-input" oninput="handleSearch(this.value)" placeholder="Search jerseys, home/away kits, jeans, sweaters..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-brand-500 transition">
+            </div>
+            <div id="search-results" class="max-h-80 overflow-y-auto space-y-2">
+                <p class="text-xs text-slate-400 text-center py-4">Type to start searching Wangige catalog...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Data & Logic -->
+    <script>
+        // High-definition images with variant mappings for dynamic live preview updates
+        let products = [];
+        let siteSettings = {
+            whatsapp_number: '254705624535',
+            logo_url: '',
+            hero_image_url: '',
+            about_image_url: '',
+            shop_image_url: ''
+        };
+
+
+        let cart = [];
+        let currentFilter = 'all';
+
+        window.onload = function() {
+            loadStoreData();
+        };
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
+            }[ch]));
+        }
+
+        function normalizeProduct(row) {
+            return {
+                ...row,
+                id: row.id,
+                name: row.name || 'Unnamed Product',
+                category: row.category || 'other',
+                price: Number(row.price || 0),
+                oldPrice: Number(row.old_price || 0),
+                rating: Number(row.rating || 0),
+                reviews: Number(row.reviews || 0),
+                description: row.description || '',
+                sizes: Array.isArray(row.sizes) && row.sizes.length ? row.sizes : ['One Size'],
+                colors: Array.isArray(row.colors) && row.colors.length ? row.colors : ['Default'],
+                hasKitType: Boolean(row.has_kit_type),
+                kitTypes: Array.isArray(row.kit_types) ? row.kit_types : [],
+                defaultImage: row.default_image || 'https://placehold.co/600x750/e2e8f0/475569?text=Wangige+Clothing',
+                variantImages: row.variant_images || {},
+                inStock: row.in_stock !== false
+            };
+        }
+
+        async function loadStoreData() {
+            const grid = document.getElementById('product-grid');
+            try {
+                if (!window.WANGIGE_SUPABASE_URL || !window.WANGIGE_SUPABASE_ANON_KEY) {
+                    throw new Error('Supabase is not configured yet. Add your project URL and anon/publishable key to config.js.');
+                }
+
+                const { data: productRows, error: productError } = await sb
+                    .from('products')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (productError) throw productError;
+
+                const { data: settingsRow, error: settingsError } = await sb
+                    .from('site_settings')
+                    .select('*')
+                    .eq('id', 1)
+                    .maybeSingle();
+
+                if (settingsError) throw settingsError;
+
+                products = (productRows || []).map(normalizeProduct);
+                if (settingsRow) siteSettings = { ...siteSettings, ...settingsRow };
+
+                // Apply editable website images when their slots exist.
+                const hero = document.getElementById('site-hero-image');
+                const about = document.getElementById('site-about-image');
+                const shop = document.getElementById('site-shop-image');
+                if (hero && siteSettings.hero_image_url) hero.src = siteSettings.hero_image_url;
+                if (about && siteSettings.about_image_url) about.src = siteSettings.about_image_url;
+                if (shop && siteSettings.shop_image_url) shop.src = siteSettings.shop_image_url;
+
+                renderProducts(products);
+                updateCartUI();
+            } catch (err) {
+                console.error(err);
+                grid.innerHTML = `
+                    <div class="col-span-full py-12 text-center">
+                        <i class="fa-solid fa-cloud-exclamation text-4xl mb-3 text-slate-300"></i>
+                        <p class="text-base font-bold text-slate-700">Store catalog could not be loaded.</p>
+                        <p class="text-xs text-slate-500 mt-2 max-w-xl mx-auto">${escapeHtml(err.message || 'Check your Supabase configuration.')}</p>
+                    </div>`;
+            }
+        }
+
+        function renderProducts(items) {
+            const grid = document.getElementById('product-grid');
+            if (items.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-12 text-center text-slate-400">
+                        <i class="fa-solid fa-shirt text-4xl mb-2 text-slate-300"></i>
+                        <p class="text-base font-semibold">No clothing items found in this category.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = items.map(p => `
+                <div id="product-card-${p.id}" class="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition duration-300 overflow-hidden flex flex-col justify-between group">
+                    <div>
+                        <!-- Product Preview Image -->
+                        <div class="relative overflow-hidden aspect-[4/5] bg-slate-100">
+                            <img id="img-preview-${p.id}" src="${p.defaultImage}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/600x750/e2e8f0/475569?text=Wangige+Clothing'">
+                            <span class="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                                ${p.category}
+                            </span>
+                        </div>
+
+                        <div class="p-5 space-y-3">
+                            <div class="flex items-center justify-between text-xs text-slate-500">
+                                <span class="flex items-center gap-1 text-amber-500 font-bold">
+                                    <i class="fa-solid fa-star"></i> ${p.rating} (${p.reviews})
+                                </span>
+                                <span class="uppercase tracking-wide font-semibold ${p.inStock ? "text-emerald-600" : "text-red-500"}">${p.inStock ? "In Stock" : "Out of Stock"}</span>
+                            </div>
+                            <h3 class="font-bold text-slate-900 text-base leading-snug line-clamp-1">${p.name}</h3>
+                            <p class="text-xs text-slate-500 line-clamp-2">${p.description}</p>
+                            
+                            <!-- Football Jersey Kit Type Switcher (Home / Away) -->
+                            ${p.hasKitType ? `
+                            <div class="space-y-1 pt-1">
+                                <label class="text-[11px] font-bold uppercase text-brand-600 flex items-center gap-1">
+                                    <i class="fa-solid fa-trophy"></i> Select Kit Edition:
+                                </label>
+                                <div class="grid grid-cols-2 gap-1.5">
+                                    ${p.kitTypes.map((kit, idx) => `
+                                        <button type="button" 
+                                            id="btn-kit-${p.id}-${kit.replace(/\s+/g, '')}"
+                                            onclick="selectKitType(${p.id}, '${kit}')" 
+                                            class="kit-btn-${p.id} py-1.5 px-2 text-xs font-bold rounded-lg border text-center transition ${idx === 0 ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}">
+                                            ${kit}
+                                        </button>
+                                    `).join('')}
+                                </div>
+                                <input type="hidden" id="kit-${p.id}" value="${p.kitTypes[0]}">
+                            </div>
+                            ` : ''}
+
+                            <!-- Color / Team Selector -->
+                            <div class="space-y-1 pt-1">
+                                <label class="text-[11px] font-bold uppercase text-slate-500 block">
+                                    ${p.hasKitType ? 'Select Team / Club:' : 'Select Color:'}
+                                </label>
+                                <select id="color-${p.id}" onchange="updateProductPreview(${p.id})" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-500 transition">
+                                    ${p.colors.map(c => `<option value="${c}">${c}</option>`).join('')}
+                                </select>
+                            </div>
+
+                            <!-- Size Selector -->
+                            <div class="space-y-1">
+                                <label class="text-[11px] font-bold uppercase text-slate-500 block">Select Size:</label>
+                                <select id="size-${p.id}" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-brand-500">
+                                    ${p.sizes.map(s => `<option value="${s}">${s}</option>`).join('')}
+                                </select>
+                            </div>
+
+                            <div class="flex items-center gap-2 pt-2">
+                                <span class="text-lg font-black text-slate-900">Ksh ${p.price.toLocaleString()}</span>
+                                <span class="text-xs text-slate-400 line-through">Ksh ${p.oldPrice.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-5 pt-0">
+                        <button ${p.inStock ? `onclick="addToCartWithOptions(${p.id})"` : "disabled"} class="w-full ${p.inStock ? "bg-slate-900 hover:bg-brand-500" : "bg-slate-300 cursor-not-allowed"} text-white font-bold py-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 text-sm shadow-sm">
+                            ${p.inStock ? '<i class="fa-solid fa-cart-plus"></i> Add to Cart' : '<i class="fa-solid fa-ban"></i> Out of Stock'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Handles Home/Away kit toggling for jerseys
+        function selectKitType(productId, kitType) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            // Update hidden input state
+            const kitInput = document.getElementById(`kit-${productId}`);
+            if (kitInput) kitInput.value = kitType;
+
+            // Update kit button styles
+            document.querySelectorAll(`.kit-btn-${productId}`).forEach(btn => {
+                btn.classList.remove('bg-slate-900', 'text-white', 'border-slate-900');
+                btn.classList.add('bg-slate-50', 'text-slate-700', 'border-slate-200', 'hover:bg-slate-100');
+            });
+
+            const activeBtn = document.getElementById(`btn-kit-${productId}-${kitType.replace(/\s+/g, '')}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-slate-50', 'text-slate-700', 'border-slate-200', 'hover:bg-slate-100');
+                activeBtn.classList.add('bg-slate-900', 'text-white', 'border-slate-900');
+            }
+
+            // Trigger real-time dynamic image preview change
+            updateProductPreview(productId);
+        }
+
+        // Dynamic Image Switcher based on Team Color or Kit Type selection
+        function updateProductPreview(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product || !product.variantImages) return;
+
+            const selectedColor = document.getElementById(`color-${productId}`).value;
+            const kitInput = document.getElementById(`kit-${productId}`);
+            const selectedKit = kitInput ? kitInput.value : '';
+
+            let lookupKey = product.hasKitType ? `${selectedColor}-${selectedKit}` : selectedColor;
+            let newImage = product.variantImages[lookupKey] || product.defaultImage;
+
+            const imgEl = document.getElementById(`img-preview-${productId}`);
+            if (imgEl && imgEl.src !== newImage) {
+                imgEl.classList.remove('img-fade-in');
+                void imgEl.offsetWidth; // Trigger reflow
+                imgEl.src = newImage;
+                imgEl.classList.add('img-fade-in');
+            }
+        }
+
+        function filterCategory(cat) {
+            currentFilter = cat;
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('bg-brand-500', 'text-white', 'shadow-sm');
+                btn.classList.add('bg-white', 'text-slate-600', 'hover:bg-slate-100', 'border', 'border-slate-200');
+            });
+            event.currentTarget.classList.remove('bg-white', 'text-slate-600', 'hover:bg-slate-100', 'border', 'border-slate-200');
+            event.currentTarget.classList.add('bg-brand-500', 'text-white', 'shadow-sm');
+
+            if (cat === 'all') {
+                renderProducts(products);
+            } else {
+                renderProducts(products.filter(p => p.category === cat));
+            }
+        }
+
+        function toggleCartDrawer() {
+            document.getElementById('cart-drawer').classList.toggle('hidden');
+        }
+
+        function addToCartWithOptions(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product || !product.inStock) {
+                alert('This product is currently out of stock.');
+                return;
+            }
+            const size = document.getElementById(`size-${productId}`).value;
+            const color = document.getElementById(`color-${productId}`).value;
+            const kitInput = document.getElementById(`kit-${productId}`);
+            const kitType = kitInput ? kitInput.value : null;
+
+            // Determine image preview to save in cart
+            let lookupKey = product.hasKitType ? `${color}-${kitType}` : color;
+            let cartImage = product.variantImages && product.variantImages[lookupKey] ? product.variantImages[lookupKey] : product.defaultImage;
+
+            const cartItemId = `${productId}-${size}-${color}-${kitType || 'none'}`;
+            const existing = cart.find(item => item.cartItemId === cartItemId);
+
+            if (existing) {
+                existing.quantity += 1;
+            } else {
+                cart.push({
+                    ...product,
+                    cartItemId,
+                    selectedSize: size,
+                    selectedColor: color,
+                    selectedKit: kitType,
+                    cartImage: cartImage,
+                    quantity: 1
+                });
+            }
+
+            updateCartUI();
+            toggleCartDrawer();
+        }
+
+        function updateCartUI() {
+            const badge = document.getElementById('cart-badge');
+            const container = document.getElementById('cart-items-container');
+            const subtotalEl = document.getElementById('cart-subtotal');
+            const totalEl = document.getElementById('cart-total');
+            const checkoutBtn = document.getElementById('checkout-btn');
+
+            const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+            badge.innerText = totalCount;
+
+            if (cart.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-16 text-slate-400 space-y-2">
+                        <i class="fa-solid fa-bag-shopping text-4xl text-slate-300"></i>
+                        <p class="text-sm font-semibold">Your cart is currently empty.</p>
+                        <p class="text-xs text-slate-400">Select jerseys or clothing options to add!</p>
+                    </div>
+                `;
+                subtotalEl.innerText = "Ksh 0";
+                totalEl.innerText = "Ksh 300";
+                checkoutBtn.disabled = true;
+                return;
+            }
+
+            checkoutBtn.disabled = false;
+            let subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            let deliveryFee = 300;
+            let total = subtotal + deliveryFee;
+
+            subtotalEl.innerText = `Ksh ${subtotal.toLocaleString()}`;
+            totalEl.innerText = `Ksh ${total.toLocaleString()}`;
+
+            container.innerHTML = cart.map(item => `
+                <div class="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                    <img src="${item.cartImage || item.defaultImage}" alt="${item.name}" class="w-16 h-16 object-cover rounded-xl bg-white">
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-bold text-slate-900 text-sm truncate">${item.name}</h4>
+                        <p class="text-[11px] text-slate-500">
+                            ${item.selectedKit ? `<strong class="text-emerald-700 font-bold">${item.selectedKit}</strong> | ` : ''}
+                            Team/Color: <strong class="text-slate-800">${item.selectedColor}</strong> | Size: <strong class="text-slate-800">${item.selectedSize}</strong>
+                        </p>
+                        <p class="text-xs font-bold text-brand-600 mt-0.5">Ksh ${item.price.toLocaleString()}</p>
+                        <div class="flex items-center gap-3 mt-2">
+                            <button onclick="updateQty('${item.cartItemId}', -1)" class="w-6 h-6 bg-white border border-slate-200 rounded-md flex items-center justify-center text-xs font-bold hover:bg-slate-100">-</button>
+                            <span class="text-xs font-bold">${item.quantity}</span>
+                            <button onclick="updateQty('${item.cartItemId}', 1)" class="w-6 h-6 bg-white border border-slate-200 rounded-md flex items-center justify-center text-xs font-bold hover:bg-slate-100">+</button>
+                        </div>
+                    </div>
+                    <button onclick="removeItem('${item.cartItemId}')" class="text-slate-400 hover:text-red-500 p-2 transition">
+                        <i class="fa-solid fa-trash-can text-sm"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function updateQty(cartItemId, change) {
+            const item = cart.find(i => i.cartItemId === cartItemId);
+            if (item) {
+                item.quantity += change;
+                if (item.quantity <= 0) {
+                    cart = cart.filter(i => i.cartItemId !== cartItemId);
+                }
+                updateCartUI();
+            }
+        }
+
+        function removeItem(cartItemId) {
+            cart = cart.filter(i => i.cartItemId !== cartItemId);
+            updateCartUI();
+        }
+
+        function openCheckoutModal() {
+            toggleCartDrawer();
+            document.getElementById('checkout-modal').classList.remove('hidden');
+        }
+
+        function closeCheckoutModal() {
+            document.getElementById('checkout-modal').classList.add('hidden');
+        }
+
+        function toggleFulfillmentFields() {
+            const fulfillment = document.getElementById('cust-fulfillment').value;
+            const addressGroup = document.getElementById('delivery-address-group');
+            const physicalNotice = document.getElementById('physical-notice');
+
+            if (fulfillment === 'physical') {
+                addressGroup.classList.add('hidden');
+                physicalNotice.classList.remove('hidden');
+            } else {
+                addressGroup.classList.remove('hidden');
+                physicalNotice.classList.add('hidden');
+            }
+        }
+
+        function toggleSearchModal() {
+            const modal = document.getElementById('search-modal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                document.getElementById('search-input').focus();
+            }
+        }
+
+        function handleSearch(query) {
+            const resultsContainer = document.getElementById('search-results');
+            if (!query.trim()) {
+                resultsContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Type to start searching Wangige catalog...</p>`;
+                return;
+            }
+
+            const matched = products.filter(p => 
+                p.name.toLowerCase().includes(query.toLowerCase()) || 
+                p.category.toLowerCase().includes(query.toLowerCase()) ||
+                p.colors.some(c => c.toLowerCase().includes(query.toLowerCase()))
+            );
+
+            if (matched.length === 0) {
+                resultsContainer.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">No clothes or jerseys found for "${query}"</p>`;
+                return;
+            }
+
+            resultsContainer.innerHTML = matched.map(p => `
+                <div onclick="toggleSearchModal(); addToCartWithOptions(${p.id});" class="flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100 rounded-2xl cursor-pointer transition">
+                    <img src="${p.defaultImage}" class="w-12 h-12 object-cover rounded-xl">
+                    <div class="flex-1">
+                        <h4 class="font-bold text-slate-900 text-sm">${p.name}</h4>
+                        <p class="text-xs text-brand-600 font-semibold">Ksh ${p.price.toLocaleString()}</p>
+                    </div>
+                    <i class="fa-solid fa-plus text-slate-400"></i>
+                </div>
+            `).join('');
+        }
+
+        function handleWhatsAppCheckout(e) {
+            e.preventDefault();
+            const name = document.getElementById('cust-name').value;
+            const phone = document.getElementById('cust-phone').value;
+            const fulfillment = document.getElementById('cust-fulfillment').value;
+            const address = document.getElementById('cust-address').value;
+            const notes = document.getElementById('cust-notes').value;
+
+            let subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            let discount = fulfillment === 'physical' ? 500 : 0;
+            let deliveryFee = fulfillment === 'physical' ? 0 : 300;
+            let finalTotal = subtotal + deliveryFee - discount;
+
+            let itemsList = cart.map(i => {
+                let kitDetails = i.selectedKit ? ` [${i.selectedKit}]` : '';
+                return `• ${i.quantity}x ${i.name}${kitDetails} (Team/Color: ${i.selectedColor}, Size: ${i.selectedSize}) - Ksh ${(i.price * i.quantity).toLocaleString()}`;
+            }).join('\n');
+
+            let message = `Hello Wangige Market Clothing, I want to place an order:\n\n` +
+                          `*Customer Name:* ${name}\n` +
+                          `*Phone Number:* ${phone}\n` +
+                          `*Fulfillment:* ${fulfillment === 'physical' ? 'Physical Shop Pickup (KES 500 OFF applied)' : 'Courier Delivery to ' + address}\n` +
+                          (notes ? `*Notes:* ${notes}\n\n` : '\n') +
+                          `*Items Ordered:*\n${itemsList}\n\n` +
+                          `*Subtotal:* Ksh ${subtotal.toLocaleString()}\n` +
+                          (fulfillment === 'physical' ? `*Physical Store Discount:* -Ksh 500\n` : `*Delivery Fee:* Ksh 300\n`) +
+                          `*Total Amount:* Ksh ${finalTotal.toLocaleString()}`;
+
+            const encodedMessage = encodeURIComponent(message);
+            const whatsappNumber = String(siteSettings.whatsapp_number || '254705624535').replace(/\D/g, '');
+            
+            closeCheckoutModal();
+            window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank');
+        }
+    </script>
+</body>
+</html>

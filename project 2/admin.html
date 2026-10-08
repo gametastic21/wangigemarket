@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wangige Market — Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+body{font-family:Inter,system-ui,sans-serif}
+.tab.active{background:#e05a33;color:#fff}
+</style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+<header class="bg-slate-900 text-white sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div>
+      <h1 class="font-extrabold text-xl">Wangige Market Admin</h1>
+      <p class="text-xs text-slate-400">Products, stock and website images</p>
+    </div>
+    <div class="flex gap-2 items-center">
+      <a href="index.html" class="px-3 py-2 rounded-lg bg-slate-800 text-sm">View Store</a>
+      <button id="logoutBtn" class="hidden px-3 py-2 rounded-lg bg-red-600 text-sm">Logout</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto p-4 sm:p-6">
+  <section id="setupWarning" class="hidden bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-5 mb-6">
+    <b>Supabase is not configured yet.</b>
+    <p class="text-sm mt-1">Open <code>config.js</code> and add your Supabase project URL and anon/publishable key.</p>
+  </section>
+
+  <section id="loginView" class="max-w-md mx-auto bg-white rounded-3xl shadow p-6 mt-10">
+    <h2 class="text-2xl font-extrabold mb-2">Admin Login</h2>
+    <p class="text-sm text-slate-500 mb-6">Only your admin account should have access.</p>
+    <form id="loginForm" class="space-y-4">
+      <input id="email" type="email" required placeholder="Admin email" class="w-full border rounded-xl px-4 py-3">
+      <input id="password" type="password" required placeholder="Password" class="w-full border rounded-xl px-4 py-3">
+      <button class="w-full bg-emerald-600 text-white rounded-xl py-3 font-bold">Login</button>
+      <p id="loginError" class="text-sm text-red-600"></p>
+    </form>
+  </section>
+
+  <section id="appView" class="hidden">
+    <div class="flex gap-2 mb-6 flex-wrap">
+      <button class="tab active px-4 py-2 rounded-xl font-bold" data-tab="products">Products</button>
+      <button class="tab px-4 py-2 rounded-xl font-bold bg-white" data-tab="images">Website Images</button>
+      <button class="tab px-4 py-2 rounded-xl font-bold bg-white" data-tab="settings">Settings</button>
+    </div>
+
+    <div id="productsTab">
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <h2 class="text-2xl font-extrabold">Products</h2>
+          <p class="text-sm text-slate-500">Add, edit, replace photos and switch stock on/off.</p>
+        </div>
+        <button id="newProductBtn" class="bg-brand px-4 py-3 rounded-xl bg-[#e05a33] text-white font-bold">+ New Product</button>
+      </div>
+      <div id="productsList" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+
+    <div id="imagesTab" class="hidden">
+      <div class="bg-white rounded-2xl p-6 shadow">
+        <h2 class="text-2xl font-extrabold">Website Images</h2>
+        <p class="text-sm text-slate-500 mb-6">Replace site images without editing HTML.</p>
+        <div class="grid md:grid-cols-3 gap-6">
+          <div>
+            <label class="font-bold text-sm">Logo Image</label>
+            <img id="logoPreview" class="mt-2 w-full h-40 object-cover rounded-xl bg-slate-100">
+            <input id="logoUpload" type="file" accept="image/*" class="mt-2 w-full">
+          </div>
+          <div>
+            <label class="font-bold text-sm">Hero Image</label>
+            <img id="heroPreview" class="mt-2 w-full h-40 object-cover rounded-xl bg-slate-100">
+            <input id="heroUpload" type="file" accept="image/*" class="mt-2 w-full">
+          </div>
+          <div>
+            <label class="font-bold text-sm">About/Shop Image</label>
+            <img id="aboutPreview" class="mt-2 w-full h-40 object-cover rounded-xl bg-slate-100">
+            <input id="aboutUpload" type="file" accept="image/*" class="mt-2 w-full">
+          </div>
+        </div>
+        <button id="saveImagesBtn" class="mt-6 bg-emerald-600 text-white px-5 py-3 rounded-xl font-bold">Save Website Images</button>
+        <p id="imageMsg" class="text-sm mt-3"></p>
+      </div>
+    </div>
+
+    <div id="settingsTab" class="hidden">
+      <div class="bg-white rounded-2xl p-6 shadow max-w-xl">
+        <h2 class="text-2xl font-extrabold">Store Settings</h2>
+        <label class="block mt-5 font-bold text-sm">WhatsApp number</label>
+        <input id="whatsapp" class="w-full border rounded-xl px-4 py-3 mt-2" placeholder="254705624535">
+        <p class="text-xs text-slate-500 mt-1">Use country code, without + or spaces.</p>
+        <button id="saveSettingsBtn" class="mt-5 bg-emerald-600 text-white px-5 py-3 rounded-xl font-bold">Save Settings</button>
+        <p id="settingsMsg" class="text-sm mt-3"></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="productModal" class="hidden fixed inset-0 bg-slate-900/60 z-50 p-4 overflow-y-auto">
+  <div class="max-w-2xl mx-auto bg-white rounded-3xl p-6 mt-6">
+    <div class="flex justify-between items-center mb-5">
+      <h2 id="modalTitle" class="text-xl font-extrabold">New Product</h2>
+      <button id="closeModal" class="text-2xl">×</button>
+    </div>
+    <form id="productForm" class="grid sm:grid-cols-2 gap-4">
+      <input type="hidden" id="productId">
+      <label class="sm:col-span-2">Name<input id="pName" required class="w-full border rounded-xl px-3 py-2 mt-1"></label>
+      <label>Category<select id="pCategory" class="w-full border rounded-xl px-3 py-2 mt-1">
+        <option value="jerseys">Jerseys</option><option value="jeans">Jeans</option><option value="tshirts">T-Shirts</option><option value="sweaters">Sweaters</option><option value="jackets">Jackets</option><option value="official">Official Wear</option><option value="undergarments">Undergarments</option>
+      </select></label>
+      <label>Price (Ksh)<input id="pPrice" type="number" min="0" required class="w-full border rounded-xl px-3 py-2 mt-1"></label>
+      <label>Old Price<input id="pOldPrice" type="number" min="0" class="w-full border rounded-xl px-3 py-2 mt-1"></label>
+      <label>Rating<input id="pRating" type="number" min="0" max="5" step="0.1" class="w-full border rounded-xl px-3 py-2 mt-1"></label>
+      <label>Reviews<input id="pReviews" type="number" min="0" class="w-full border rounded-xl px-3 py-2 mt-1"></label>
+      <label class="sm:col-span-2">Description<textarea id="pDescription" rows="3" class="w-full border rounded-xl px-3 py-2 mt-1"></textarea></label>
+      <label>Sizes (comma separated)<input id="pSizes" placeholder="S, M, L, XL" class="w-full border rounded-xl px-3 py-2 mt-1"></label>
+      <label>Colors (comma separated)<input id="pColors" placeholder="Black, White" class="w-full border rounded-xl px-3 py-2 mt-1"></label>
+      <label class="flex items-center gap-2"><input id="pHasKit" type="checkbox"> Home/Away kit product</label>
+      <label class="flex items-center gap-2"><input id="pStock" type="checkbox" checked> In stock</label>
+      <label class="sm:col-span-2">Main Product Photo<input id="pImage" type="file" accept="image/*" class="w-full border rounded-xl px-3 py-2 mt-1"></label>
+      <div class="sm:col-span-2">
+        <img id="pImagePreview" class="hidden w-32 h-40 object-cover rounded-xl">
+      </div>
+      <button class="sm:col-span-2 bg-[#e05a33] text-white rounded-xl py-3 font-bold">Save Product</button>
+    </form>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = window.WANGIGE_SUPABASE_URL;
+const SUPABASE_KEY = window.WANGIGE_SUPABASE_ANON_KEY;
+let sb = null;
+let editingProduct = null;
+
+const $ = id => document.getElementById(id);
+function configured(){ return SUPABASE_URL && SUPABASE_KEY && !SUPABASE_URL.includes("YOUR_") && !SUPABASE_KEY.includes("YOUR_"); }
+
+if(!configured()) $("setupWarning").classList.remove("hidden");
+else sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function init(){
+  if(!sb) return;
+  const {data:{session}} = await sb.auth.getSession();
+  if(session) showApp();
+  sb.auth.onAuthStateChange((_event, session)=> session ? showApp() : showLogin());
+}
+function showLogin(){ $("loginView").classList.remove("hidden"); $("appView").classList.add("hidden"); $("logoutBtn").classList.add("hidden"); }
+function showApp(){ $("loginView").classList.add("hidden"); $("appView").classList.remove("hidden"); $("logoutBtn").classList.remove("hidden"); loadProducts(); loadSettings(); }
+$("loginForm").onsubmit = async e => {
+  e.preventDefault();
+  const {error} = await sb.auth.signInWithPassword({email:$("email").value,password:$("password").value});
+  $("loginError").textContent = error ? error.message : "";
+};
+$("logoutBtn").onclick = async()=>sb.auth.signOut();
+
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  ["products","images","settings"].forEach(x=>$(x+"Tab").classList.toggle("hidden", b.dataset.tab!==x));
+});
+
+async function loadProducts(){
+  const {data,error}=await sb.from("products").select("*").order("created_at",{ascending:false});
+  if(error){ alert(error.message); return; }
+  $("productsList").innerHTML=data.map(p=>`
+    <div class="bg-white rounded-2xl shadow overflow-hidden">
+      <div class="relative">
+        <img src="${p.default_image||'https://placehold.co/600x750'}" class="w-full h-56 object-cover">
+        <span class="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold ${p.in_stock?'bg-emerald-600 text-white':'bg-red-600 text-white'}">${p.in_stock?'IN STOCK':'OUT OF STOCK'}</span>
+      </div>
+      <div class="p-4">
+        <h3 class="font-extrabold">${esc(p.name)}</h3>
+        <p class="text-sm text-slate-500">${esc(p.category)} · Ksh ${Number(p.price).toLocaleString()}</p>
+        <div class="flex gap-2 mt-4">
+          <button onclick='editProduct(${JSON.stringify(p).replace(/'/g,"&#39;")})' class="flex-1 bg-slate-900 text-white rounded-xl py-2 font-bold">Edit</button>
+          <button onclick="toggleStock('${p.id}',${p.in_stock})" class="flex-1 ${p.in_stock?'bg-amber-100 text-amber-800':'bg-emerald-100 text-emerald-800'} rounded-xl py-2 font-bold">${p.in_stock?'Mark Out':'Mark In'} Stock</button>
+        </div>
+        <button onclick="deleteProduct('${p.id}')" class="w-full mt-2 bg-red-50 text-red-700 rounded-xl py-2 font-bold">Delete</button>
+      </div>
+    </div>`).join("");
+}
+function esc(s=""){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+
+$("newProductBtn").onclick=()=>{
+ editingProduct=null; $("modalTitle").textContent="New Product"; $("productForm").reset(); $("pStock").checked=true; $("pImagePreview").classList.add("hidden"); $("productModal").classList.remove("hidden");
+};
+$("closeModal").onclick=()=>$("productModal").classList.add("hidden");
+function editProduct(p){
+ editingProduct=p; $("modalTitle").textContent="Edit Product"; $("productId").value=p.id; $("pName").value=p.name; $("pCategory").value=p.category; $("pPrice").value=p.price; $("pOldPrice").value=p.old_price||""; $("pRating").value=p.rating||""; $("pReviews").value=p.reviews||""; $("pDescription").value=p.description||""; $("pSizes").value=(p.sizes||[]).join(", "); $("pColors").value=(p.colors||[]).join(", "); $("pHasKit").checked=!!p.has_kit_type; $("pStock").checked=!!p.in_stock; $("pImagePreview").src=p.default_image||""; $("pImagePreview").classList.toggle("hidden",!p.default_image); $("productModal").classList.remove("hidden");
+}
+$("pImage").onchange=e=>{const f=e.target.files[0];if(f){$("pImagePreview").src=URL.createObjectURL(f);$("pImagePreview").classList.remove("hidden");}};
+async function uploadImage(file, folder="products"){
+  if(!file)return null;
+  const ext=file.name.split(".").pop().toLowerCase();
+  const path=`${folder}/${crypto.randomUUID()}.${ext}`;
+  const {error}=await sb.storage.from("wangige-images").upload(path,file,{upsert:false,contentType:file.type});
+  if(error) throw error;
+  return sb.storage.from("wangige-images").getPublicUrl(path).data.publicUrl;
+}
+$("productForm").onsubmit=async e=>{
+ e.preventDefault();
+ try{
+  let image=editingProduct?.default_image||null;
+  if($("pImage").files[0]) image=await uploadImage($("pImage").files[0]);
+  const payload={name:$("pName").value.trim(),category:$("pCategory").value,price:Number($("pPrice").value),old_price:$("pOldPrice").value?Number($("pOldPrice").value):null,rating:$("pRating").value?Number($("pRating").value):0,reviews:$("pReviews").value?Number($("pReviews").value):0,description:$("pDescription").value.trim(),sizes:$("pSizes").value.split(",").map(x=>x.trim()).filter(Boolean),colors:$("pColors").value.split(",").map(x=>x.trim()).filter(Boolean),has_kit_type:$("pHasKit").checked,kit_types:$("pHasKit").checked?["Home Kit","Away Kit"]:[],in_stock:$("pStock").checked,default_image:image,updated_at:new Date().toISOString()};
+  const q=editingProduct?sb.from("products").update(payload).eq("id",editingProduct.id):sb.from("products").insert(payload);
+  const {error}=await q;if(error)throw error;
+  $("productModal").classList.add("hidden"); await loadProducts();
+ }catch(err){alert(err.message);}
+};
+async function toggleStock(id,current){const {error}=await sb.from("products").update({in_stock:!current}).eq("id",id);if(error)alert(error.message);else loadProducts();}
+async function deleteProduct(id){if(!confirm("Delete this product?"))return;const {error}=await sb.from("products").delete().eq("id",id);if(error)alert(error.message);else loadProducts();}
+
+async function loadSettings(){
+ const {data,error}=await sb.from("site_settings").select("*").eq("id",1).single();
+ if(error){console.warn(error);return}
+ $("whatsapp").value=data.whatsapp_number||"254705624535";
+ for(const [id,key] of [["logoPreview","logo_image"],["heroPreview","hero_image"],["aboutPreview","about_image"]]){ $(id).src=data[key]||"https://placehold.co/600x400?text=No+image"; }
+}
+async function saveSettingImages(){
+ try{
+  const data={};
+  for(const [input,key] of [["logoUpload","logo_image"],["heroUpload","hero_image"],["aboutUpload","about_image"]]){
+   if($(input).files[0]) data[key]=await uploadImage($(input).files[0],"site");
+  }
+  if(Object.keys(data).length){data.updated_at=new Date().toISOString();const {error}=await sb.from("site_settings").update(data).eq("id",1);if(error)throw error;}
+  $("imageMsg").textContent="Website images saved.";
+  loadSettings();
+ }catch(e){$("imageMsg").textContent=e.message;}
+}
+$("saveImagesBtn").onclick=saveSettingImages;
+$("saveSettingsBtn").onclick=async()=>{
+ const n=$("whatsapp").value.replace(/\D/g,"");
+ const {error}=await sb.from("site_settings").update({whatsapp_number:n,updated_at:new Date().toISOString()}).eq("id",1);
+ $("settingsMsg").textContent=error?error.message:"Settings saved.";
+};
+init();
+</script>
+</body>
+</html>
