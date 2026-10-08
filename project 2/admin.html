@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wangige Market Clothing | Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>tailwind.config={theme:{extend:{fontFamily:{sans:['"Plus Jakarta Sans"','sans-serif']},colors:{brand:{50:'#fdf8f6',100:'#fbeee9',500:'#e05a33',600:'#c74520',700:'#9e3518'}}}}}</script>
+<style>.tab.active{background:#e05a33;color:#fff;border-color:#e05a33}.inp{width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:.75rem;padding:.7rem 1rem;font-size:.875rem}.inp:focus{outline:none;border-color:#e05a33}.lbl{display:block;font-size:.7rem;font-weight:700;text-transform:uppercase;color:#475569;margin-bottom:.25rem}</style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen">
+<div class="bg-emerald-700 text-white text-xs sm:text-sm py-2 px-4 text-center font-bold"><i class="fa-solid fa-lock mr-1"></i> Admin panel — changes go live on the store instantly</div>
+<header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-sm">
+ <div class="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
+  <div class="flex items-center gap-3">
+   <div class="w-11 h-11 bg-brand-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-brand-500/20 overflow-hidden">
+    <img id="hdrLogo" class="hidden w-full h-full object-contain" alt=""><i id="hdrLogoFb" class="fa-solid fa-shirt text-xl"></i></div>
+   <div><span class="text-xl font-extrabold tracking-tight text-slate-900 block leading-none">Wangige Market</span><span class="text-xs font-semibold uppercase tracking-wider text-brand-600 mt-1 block">Store Admin</span></div>
+  </div>
+  <div class="flex items-center gap-2">
+   <a href="index.html" target="_blank" class="px-4 py-2.5 rounded-xl bg-brand-50 text-brand-700 border border-brand-100 font-semibold text-sm hover:bg-brand-100 transition"><i class="fa-solid fa-store mr-1"></i><span class="hidden sm:inline"> View Store</span></a>
+   <button id="logoutBtn" class="hidden px-4 py-2.5 rounded-xl bg-slate-900 text-white font-semibold text-sm hover:bg-slate-700 transition"><i class="fa-solid fa-right-from-bracket mr-1"></i><span class="hidden sm:inline"> Logout</span></button>
+  </div>
+ </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+ <section id="setupWarning" class="hidden bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-5 mb-6"><b>Supabase is not configured.</b> <span class="text-sm">Add your project URL and anon key to <code>config.js</code>.</span></section>
+
+ <section id="loginView" class="max-w-md mx-auto bg-white rounded-3xl shadow-xl border border-slate-100 p-8 mt-8">
+  <h2 class="text-2xl font-extrabold text-slate-900">Admin login</h2>
+  <p class="text-sm text-slate-500 mt-1 mb-6">Sign in with your admin account to manage the store.</p>
+  <form id="loginForm" class="space-y-4">
+   <div><label class="lbl">Email</label><input id="email" type="email" required class="inp"></div>
+   <div><label class="lbl">Password</label><input id="password" type="password" required class="inp"></div>
+   <button class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-emerald-600/20 transition">Log in</button>
+   <p id="loginError" class="text-sm text-red-600"></p>
+  </form>
+ </section>
+
+ <section id="appView" class="hidden">
+  <div class="flex gap-2 mb-8 flex-wrap">
+   <button class="tab active px-4 py-2 rounded-xl text-sm font-semibold border border-slate-200 bg-white text-slate-600 transition" data-tab="products"><i class="fa-solid fa-shirt mr-1"></i> Products</button>
+   <button class="tab px-4 py-2 rounded-xl text-sm font-semibold border border-slate-200 bg-white text-slate-600 transition" data-tab="images"><i class="fa-solid fa-image mr-1"></i> Website images</button>
+   <button class="tab px-4 py-2 rounded-xl text-sm font-semibold border border-slate-200 bg-white text-slate-600 transition" data-tab="settings"><i class="fa-brands fa-whatsapp mr-1"></i> WhatsApp</button>
+  </div>
+
+  <div id="productsTab">
+   <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+    <div><span class="text-brand-600 font-bold text-sm tracking-wider uppercase">Catalog</span><h2 class="text-3xl font-extrabold text-slate-900 mt-1">Products</h2></div>
+    <div class="flex flex-wrap gap-2">
+     <input id="q" placeholder="Search products" class="inp !w-48">
+     <select id="catF" class="inp !w-44"><option value="all">All categories</option><option value="jerseys">Jerseys</option><option value="jeans">Jeans</option><option value="tshirts">T-Shirts</option><option value="sweaters">Sweaters</option><option value="jackets">Jackets</option><option value="official">Official Wear</option><option value="undergarments">Undergarments</option></select>
+     <button id="newBtn" class="bg-brand-500 hover:bg-brand-600 text-white px-5 py-3 rounded-xl font-bold text-sm shadow-lg shadow-brand-500/30 transition"><i class="fa-solid fa-plus mr-1"></i> New product</button>
+    </div>
+   </div>
+   <div id="list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+  </div>
+
+  <div id="imagesTab" class="hidden">
+   <h2 class="text-3xl font-extrabold text-slate-900">Website images</h2>
+   <p class="text-sm text-slate-500 mt-1 mb-6">Pick a new image, then save. The store updates right away.</p>
+   <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6" id="imgGrid"></div>
+    <button id="saveImgs" class="mt-6 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3.5 rounded-xl font-bold shadow-lg shadow-emerald-600/20 transition">Save website images</button>
+    <p id="imgMsg" class="text-sm mt-3"></p>
+   </div>
+  </div>
+
+  <div id="settingsTab" class="hidden">
+   <h2 class="text-3xl font-extrabold text-slate-900 mb-6">WhatsApp number</h2>
+   <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 max-w-xl">
+    <label class="lbl">Orders go to this number</label>
+    <input id="wa" class="inp" placeholder="254705624535">
+    <p class="text-xs text-slate-500 mt-1">Include the country code. No + or spaces.</p>
+    <button id="saveWa" class="mt-5 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3.5 rounded-xl font-bold shadow-lg shadow-emerald-600/20 transition">Save number</button>
+    <p id="waMsg" class="text-sm mt-3"></p>
+   </div>
+  </div>
+ </section>
+</main>
+
+<div id="modal" class="hidden fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto">
+ <div id="modalBg" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+ <div class="relative bg-white rounded-3xl shadow-2xl max-w-3xl w-full p-6 sm:p-8 z-10 my-8">
+  <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
+   <h3 id="mTitle" class="text-xl font-extrabold text-slate-900">New product</h3>
+   <button id="mClose" class="p-2 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+  </div>
+  <form id="form" class="grid sm:grid-cols-2 gap-4">
+   <div class="sm:col-span-2"><label class="lbl">Name</label><input id="pName" required class="inp"></div>
+   <div><label class="lbl">Category</label><select id="pCat" class="inp"><option value="jerseys">Jerseys</option><option value="jeans">Jeans</option><option value="tshirts">T-Shirts</option><option value="sweaters">Sweaters</option><option value="jackets">Jackets</option><option value="official">Official Wear</option><option value="undergarments">Undergarments</option></select></div>
+   <div><label class="lbl">Price (Ksh)</label><input id="pPrice" type="number" min="0" required class="inp"></div>
+   <div><label class="lbl">Old price (Ksh)</label><input id="pOld" type="number" min="0" class="inp"></div>
+   <div class="grid grid-cols-2 gap-3"><div><label class="lbl">Rating</label><input id="pRate" type="number" min="0" max="5" step="0.1" class="inp"></div><div><label class="lbl">Reviews</label><input id="pRev" type="number" min="0" class="inp"></div></div>
+   <div class="sm:col-span-2"><label class="lbl">Description</label><textarea id="pDesc" rows="2" class="inp"></textarea></div>
+   <div><label class="lbl">Sizes (comma separated)</label><input id="pSizes" placeholder="S, M, L, XL" class="inp"></div>
+   <div><label class="lbl">Colors / teams (comma separated)</label><input id="pColors" placeholder="Arsenal, Chelsea" class="inp"></div>
+   <label class="flex items-center gap-2 text-sm font-semibold"><input id="pKit" type="checkbox" class="w-4 h-4 accent-orange-600"> Home / Away kit product</label>
+   <label class="flex items-center gap-2 text-sm font-semibold"><input id="pStock" type="checkbox" checked class="w-4 h-4 accent-emerald-600"> In stock</label>
+   <div class="sm:col-span-2 flex items-center gap-4">
+    <img id="pPrev" class="w-24 h-28 object-cover rounded-xl bg-slate-100 border border-slate-200" alt="">
+    <div class="flex-1"><label class="lbl">Main product photo</label><input id="pImg" type="file" accept="image/*" class="inp"></div>
+   </div>
+   <div class="sm:col-span-2">
+    <label class="lbl">Photos for each type</label>
+    <p class="text-xs text-slate-500 mb-3">Customers see these when they open a product and pick a color, team or kit. Types appear after you fill in colors above.</p>
+    <div id="vBox" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+   </div>
+   <button id="saveBtn" class="sm:col-span-2 bg-brand-500 hover:bg-brand-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-brand-500/30 transition">Save product</button>
+  </form>
+ </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=(s='')=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const csv=s=>s.split(',').map(x=>x.trim()).filter(Boolean);
+const PH='https://placehold.co/600x750/e2e8f0/475569?text=No+photo';
+const KITS=['Home Kit','Away Kit'];
+let sb=null,all=[],editing=null,mainFile=null,vUrls={},vPending={},settings={},imgPending={};
+const ok=()=>window.WANGIGE_SUPABASE_URL&&window.WANGIGE_SUPABASE_ANON_KEY&&!/YOUR_/.test(window.WANGIGE_SUPABASE_URL+window.WANGIGE_SUPABASE_ANON_KEY);
+if(!ok())$('setupWarning').classList.remove('hidden');else sb=supabase.createClient(WANGIGE_SUPABASE_URL,WANGIGE_SUPABASE_ANON_KEY);
+
+async function init(){
+ if(!sb)return;
+ const{data:{session}}=await sb.auth.getSession();
+ session?showApp():showLogin();
+ sb.auth.onAuthStateChange((e,s)=>{if(e==='SIGNED_IN')showApp();if(e==='SIGNED_OUT')showLogin();});
+}
+function showLogin(){$('loginView').classList.remove('hidden');$('appView').classList.add('hidden');$('logoutBtn').classList.add('hidden')}
+function showApp(){$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');loadProducts();loadSettings()}
+$('loginForm').onsubmit=async e=>{e.preventDefault();const{error}=await sb.auth.signInWithPassword({email:$('email').value,password:$('password').value});$('loginError').textContent=error?error.message:''};
+$('logoutBtn').onclick=()=>sb.auth.signOut();
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+ ['products','images','settings'].forEach(t=>$(t+'Tab').classList.toggle('hidden',b.dataset.tab!==t));
+});
+
+/* ---------- products ---------- */
+async function loadProducts(){
+ const{data,error}=await sb.from('products').select('*').order('created_at',{ascending:false});
+ if(error){alert(error.message);return}
+ all=data;renderList();
+}
+function renderList(){
+ const q=$('q').value.toLowerCase(),c=$('catF').value;
+ const items=all.filter(p=>(c==='all'||p.category===c)&&p.name.toLowerCase().includes(q));
+ $('list').innerHTML=items.length?items.map(p=>{
+  const n=Object.keys(p.variant_images||{}).length;
+  return `<div class="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition duration-300 overflow-hidden flex flex-col justify-between">
+  <div>
+   <div class="relative aspect-[4/5] bg-slate-100 overflow-hidden">
+    <img src="${esc(p.default_image||PH)}" class="w-full h-full object-cover ${p.in_stock?'':'grayscale opacity-70'}" onerror="this.src='${PH}'" alt="">
+    <span class="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">${esc(p.category)}</span>
+    <span class="absolute top-3 right-3 text-[11px] font-bold px-3 py-1 rounded-full text-white ${p.in_stock?'bg-emerald-600':'bg-red-600'}">${p.in_stock?'In stock':'Out of stock'}</span>
+   </div>
+   <div class="p-5 space-y-2">
+    <div class="flex items-center justify-between text-xs text-slate-500"><span class="text-amber-500 font-bold"><i class="fa-solid fa-star"></i> ${p.rating||0} (${p.reviews||0})</span><span class="font-semibold text-brand-600">${n} type photo${n===1?'':'s'}</span></div>
+    <h3 class="font-bold text-slate-900 leading-snug line-clamp-1">${esc(p.name)}</h3>
+    <p class="text-xs text-slate-500 line-clamp-2">${esc(p.description||'')}</p>
+    <div class="flex items-center gap-2 pt-1"><span class="text-lg font-black text-slate-900">Ksh ${Number(p.price).toLocaleString()}</span>${p.old_price?`<span class="text-xs text-slate-400 line-through">Ksh ${Number(p.old_price).toLocaleString()}</span>`:''}</div>
+   </div>
+  </div>
+  <div class="p-5 pt-0 space-y-2">
+   <div class="grid grid-cols-2 gap-2">
+    <button data-act="edit" data-id="${p.id}" class="bg-slate-900 hover:bg-brand-500 text-white font-bold py-2.5 rounded-xl text-sm transition"><i class="fa-solid fa-pen mr-1"></i> Edit</button>
+    <button data-act="stock" data-id="${p.id}" class="${p.in_stock?'bg-amber-50 text-amber-800 border border-amber-200':'bg-emerald-50 text-emerald-800 border border-emerald-200'} font-bold py-2.5 rounded-xl text-sm transition">${p.in_stock?'Mark out':'Mark in'}</button>
+   </div>
+   <button data-act="del" data-id="${p.id}" class="w-full bg-red-50 hover:bg-red-100 text-red-700 font-bold py-2.5 rounded-xl text-sm transition"><i class="fa-solid fa-trash-can mr-1"></i> Delete</button>
+  </div></div>`}).join(''):'<p class="col-span-full text-center text-slate-400 py-12 font-semibold">No products found. Add your first product.</p>';
+}
+$('q').oninput=renderList;$('catF').onchange=renderList;
+$('list').onclick=async e=>{
+ const b=e.target.closest('button[data-act]');if(!b)return;
+ const p=all.find(x=>String(x.id)===b.dataset.id);if(!p)return;
+ if(b.dataset.act==='edit')openModal(p);
+ if(b.dataset.act==='stock'){const{error}=await sb.from('products').update({in_stock:!p.in_stock,updated_at:new Date().toISOString()}).eq('id',p.id);error?alert(error.message):loadProducts()}
+ if(b.dataset.act==='del'&&confirm('Delete "'+p.name+'"? This cannot be undone.')){const{error}=await sb.from('products').delete().eq('id',p.id);error?alert(error.message):loadProducts()}
+};
+
+/* ---------- product modal ---------- */
+const vKeys=()=>{const cs=csv($('pColors').value);return $('pKit').checked?cs.flatMap(c=>KITS.map(k=>c+'-'+k)):cs};
+function renderVariants(){
+ const ks=vKeys();
+ $('vBox').innerHTML=ks.length?ks.map(k=>`<div class="bg-slate-50 border border-slate-200 rounded-2xl p-2 space-y-2">
+  <img src="${esc(vPending[k]?vPending[k].url:(vUrls[k]||PH))}" class="w-full aspect-[4/5] object-cover rounded-xl bg-white" alt="">
+  <p class="text-xs font-bold text-slate-800 truncate" title="${esc(k)}">${esc(k)}</p>
+  <input type="file" accept="image/*" data-key="${esc(k)}" class="text-[11px] w-full"></div>`).join(''):'<p class="col-span-full text-xs text-slate-400">Add colors or teams to upload a photo for each type.</p>';
+}
+$('vBox').onchange=e=>{const f=e.target.files[0],k=e.target.dataset.key;if(f&&k){vPending[k]={file:f,url:URL.createObjectURL(f)};renderVariants()}};
+$('pColors').oninput=renderVariants;$('pKit').onchange=renderVariants;
+$('pImg').onchange=e=>{mainFile=e.target.files[0]||null;if(mainFile)$('pPrev').src=URL.createObjectURL(mainFile)};
+function openModal(p){
+ editing=p||null;mainFile=null;vPending={};vUrls=p?{...(p.variant_images||{})}:{};
+ $('form').reset();$('pStock').checked=true;
+ $('mTitle').textContent=p?'Edit product':'New product';
+ if(p){$('pName').value=p.name;$('pCat').value=p.category;$('pPrice').value=p.price;$('pOld').value=p.old_price||'';$('pRate').value=p.rating||'';$('pRev').value=p.reviews||'';$('pDesc').value=p.description||'';$('pSizes').value=(p.sizes||[]).join(', ');$('pColors').value=(p.colors||[]).join(', ');$('pKit').checked=!!p.has_kit_type;$('pStock').checked=!!p.in_stock}
+ $('pPrev').src=p?.default_image||PH;
+ renderVariants();$('modal').classList.remove('hidden');
+}
+const closeModal=()=>$('modal').classList.add('hidden');
+$('newBtn').onclick=()=>openModal(null);$('mClose').onclick=closeModal;$('modalBg').onclick=closeModal;
+
+async function upload(file,folder){
+ const ext=(file.name.split('.').pop()||'jpg').toLowerCase();
+ const path=`${folder}/${crypto.randomUUID()}.${ext}`;
+ const{error}=await sb.storage.from('wangige-images').upload(path,file,{contentType:file.type,cacheControl:'3600'});
+ if(error)throw error;
+ return sb.storage.from('wangige-images').getPublicUrl(path).data.publicUrl;
+}
+$('form').onsubmit=async e=>{
+ e.preventDefault();const btn=$('saveBtn');btn.disabled=true;btn.textContent='Saving…';
+ try{
+  let img=editing?.default_image||null;
+  if(mainFile)img=await upload(mainFile,'products');
+  const ks=vKeys(),vi={};
+  for(const k of ks){
+   if(vPending[k])vi[k]=await upload(vPending[k].file,'variants');
+   else if(vUrls[k])vi[k]=vUrls[k];
+  }
+  const payload={name:$('pName').value.trim(),category:$('pCat').value,price:Number($('pPrice').value),old_price:$('pOld').value?Number($('pOld').value):null,rating:Number($('pRate').value)||0,reviews:Number($('pRev').value)||0,description:$('pDesc').value.trim(),sizes:csv($('pSizes').value),colors:csv($('pColors').value),has_kit_type:$('pKit').checked,kit_types:$('pKit').checked?KITS:[],in_stock:$('pStock').checked,default_image:img,variant_images:vi,updated_at:new Date().toISOString()};
+  const{error}=editing?await sb.from('products').update(payload).eq('id',editing.id):await sb.from('products').insert(payload);
+  if(error)throw error;
+  closeModal();await loadProducts();
+ }catch(err){alert(err.message)}
+ btn.disabled=false;btn.textContent='Save product';
+};
+
+/* ---------- site settings ---------- */
+const IMGS=[['logo_image','Logo','h-40 object-contain'],['hero_image','Hero background','h-40 object-cover'],['about_image','About section','h-40 object-cover'],['shop_image','Shop / stall photo','h-40 object-cover']];
+$('imgGrid').innerHTML=IMGS.map(([k,l,c])=>`<div><label class="lbl">${l}</label><img id="prev_${k}" class="w-full ${c} rounded-2xl bg-slate-100 border border-slate-200" alt=""><input type="file" accept="image/*" data-k="${k}" class="mt-2 text-xs w-full"></div>`).join('');
+$('imgGrid').onchange=e=>{const f=e.target.files[0],k=e.target.dataset.k;if(f){imgPending[k]=f;$('prev_'+k).src=URL.createObjectURL(f)}};
+async function loadSettings(){
+ const{data}=await sb.from('site_settings').select('*').eq('id',1).maybeSingle();
+ settings=data||{};
+ $('wa').value=settings.whatsapp_number||'254705624535';
+ IMGS.forEach(([k])=>$('prev_'+k).src=settings[k]||'https://placehold.co/600x400/e2e8f0/475569?text=No+image');
+ if(settings.logo_image){$('hdrLogo').src=settings.logo_image;$('hdrLogo').classList.remove('hidden');$('hdrLogoFb').classList.add('hidden')}
+}
+$('saveImgs').onclick=async()=>{
+ const m=$('imgMsg');m.className='text-sm mt-3 text-slate-500';m.textContent='Uploading…';
+ try{
+  const d={id:1};
+  for(const k in imgPending)d[k]=await upload(imgPending[k],'site');
+  if(Object.keys(d).length===1){m.textContent='Choose at least one new image first.';return}
+  d.updated_at=new Date().toISOString();
+  const{error}=await sb.from('site_settings').upsert(d);if(error)throw error;
+  imgPending={};m.className='text-sm mt-3 text-emerald-700 font-semibold';m.textContent='Saved. The store now shows your new images.';loadSettings();
+ }catch(err){m.className='text-sm mt-3 text-red-600';m.textContent=err.message}
+};
+$('saveWa').onclick=async()=>{
+ const n=$('wa').value.replace(/\D/g,''),m=$('waMsg');
+ if(n.length<9){m.className='text-sm mt-3 text-red-600';m.textContent='Enter the full number with country code.';return}
+ const{error}=await sb.from('site_settings').upsert({id:1,whatsapp_number:n,updated_at:new Date().toISOString()});
+ m.className='text-sm mt-3 '+(error?'text-red-600':'text-emerald-700 font-semibold');m.textContent=error?error.message:'Saved. Orders now go to +'+n+'.';
+};
+init();
+</script>
+</body>
+</html>
